@@ -5,10 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle Micro:bit Bluetooth | Professor Cleber</title>
     <meta name="description" content="Controle sua placa Micro:bit v2 via Bluetooth. Interface web responsiva com setas e botões para envio de comandos.">
-    <meta name="keywords" content="micro:bit, bluetooth, controle, professor cleber, web bluetooth, javascript">
+    <meta name="keywords" content="micro:bit, bluetooth, controle, professor cleber, web bluetooth, javascript, android">
     <meta name="author" content="Professor Cleber">
+    
+    <!-- PWA Configuration (Importante para Android) -->
+    <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Controle Micro:bit&quot;,&quot;short_name&quot;:&quot;Micro:bit Ctrl&quot;,&quot;description&quot;:&quot;Controle Bluetooth do Micro:bit&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#1a237e&quot;,&quot;theme_color&quot;:&quot;#3949ab&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9IiNCM0RFRkIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRleHQgeT0iMC45ZW0iIGZvbnQtc2l6ZT0iOTAiPiTwn6WKPC90ZXh0Pjwvc3ZnPg==&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}">
+    <meta name="theme-color" content="#3949ab">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Icons and Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    
     <style>
         :root {
             --primary-color: #3949ab;
@@ -16,10 +26,12 @@
             --accent-color: #ff6b6b;
             --success-color: #4caf50;
             --error-color: #f44336;
+            --warning-color: #ff9800;
             --text-light: #bbdefb;
             --bg-dark: #1a237e;
             --bg-medium: #283593;
             --shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            --android-green: #4CAF50;
         }
         
         * {
@@ -27,6 +39,7 @@
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
         
         body {
@@ -38,6 +51,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            touch-action: manipulation;
         }
         
         .container {
@@ -84,18 +98,30 @@
         }
         
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             margin-bottom: 10px;
             color: var(--text-light);
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
+        .android-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #3DDC84 0%, #34A853 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
         .subtitle {
-            font-size: 1.1rem;
+            font-size: 1rem;
             opacity: 0.9;
             max-width: 600px;
             margin: 0 auto;
             line-height: 1.5;
+            padding: 0 10px;
         }
         
         .bluetooth-status {
@@ -111,6 +137,7 @@
             margin-left: auto;
             margin-right: auto;
             transition: all 0.3s ease;
+            min-height: 50px;
         }
         
         .bluetooth-status i {
@@ -125,95 +152,90 @@
             color: var(--success-color);
         }
         
+        .android-status {
+            color: var(--android-green);
+            font-weight: bold;
+        }
+        
         .control-panel {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 25px;
+            gap: 20px;
         }
         
         .directional-pad {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             width: 100%;
-            max-width: 400px;
+            max-width: 350px;
         }
         
         .directional-row {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             width: 100%;
         }
         
         .directional-btn {
-            width: 90px;
-            height: 90px;
+            width: 85px;
+            height: 85px;
             border-radius: 15px;
             background-color: var(--primary-color);
             border: none;
             color: white;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 5px 0 var(--bg-medium), 0 10px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 0 var(--bg-medium), 0 8px 12px rgba(0, 0, 0, 0.2);
             touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        .directional-btn:hover {
-            background-color: #303f9f;
-            transform: translateY(2px);
-            box-shadow: 0 3px 0 var(--bg-medium), 0 8px 10px rgba(0, 0, 0, 0.2);
+            user-select: none;
         }
         
         .directional-btn:active {
-            transform: translateY(5px);
-            box-shadow: 0 0 0 var(--bg-medium), 0 5px 5px rgba(0, 0, 0, 0.2);
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 var(--bg-medium), 0 3px 5px rgba(0, 0, 0, 0.2);
+            background-color: #303f9f;
         }
         
         .action-buttons {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            gap: 12px;
             width: 100%;
-            max-width: 400px;
+            max-width: 350px;
         }
         
         .action-btn {
-            padding: 20px 10px;
+            padding: 18px 8px;
             border-radius: 15px;
             background-color: var(--secondary-color);
             border: none;
             color: white;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 5px 0 var(--primary-color), 0 10px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 0 var(--primary-color), 0 8px 12px rgba(0, 0, 0, 0.2);
             touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        .action-btn:hover {
-            background-color: #3f51b5;
-            transform: translateY(2px);
-            box-shadow: 0 3px 0 var(--primary-color), 0 8px 10px rgba(0, 0, 0, 0.2);
+            user-select: none;
         }
         
         .action-btn:active {
-            transform: translateY(5px);
-            box-shadow: 0 0 0 var(--primary-color), 0 5px 5px rgba(0, 0, 0, 0.2);
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 var(--primary-color), 0 3px 5px rgba(0, 0, 0, 0.2);
+            background-color: #3f51b5;
         }
         
         .btn-info {
-            font-size: 0.8rem;
-            margin-top: 5px;
+            font-size: 0.75rem;
+            margin-top: 4px;
             opacity: 0.8;
             font-weight: normal;
         }
@@ -230,24 +252,26 @@
         .connection-controls {
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 12px;
             justify-content: center;
             align-items: center;
             margin-top: 15px;
         }
         
         .connection-btn {
-            padding: 12px 25px;
+            padding: 12px 20px;
             border-radius: 50px;
             border: none;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             gap: 8px;
             touch-action: manipulation;
+            min-width: 140px;
+            justify-content: center;
         }
         
         .connect-btn {
@@ -255,10 +279,9 @@
             color: white;
         }
         
-        .connect-btn:hover {
+        .connect-btn:active {
+            transform: translateY(2px);
             background-color: #388e3c;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
         }
         
         .disconnect-btn {
@@ -266,72 +289,105 @@
             color: white;
         }
         
-        .disconnect-btn:hover {
+        .disconnect-btn:active {
+            transform: translateY(2px);
             background-color: #d32f2f;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .android-debug-btn {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .android-debug-btn:active {
+            transform: translateY(2px);
+            background-color: #F57C00;
         }
         
         .instructions {
             background-color: rgba(0, 0, 0, 0.2);
-            padding: 20px;
-            border-radius: 15px;
-            margin-top: 10px;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
         }
         
         .instructions h3 {
             color: var(--text-light);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .instructions ul {
             padding-left: 20px;
-            line-height: 1.6;
+            line-height: 1.5;
+            font-size: 0.9rem;
         }
         
         .instructions li {
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         
         .log-panel {
             background-color: rgba(0, 0, 0, 0.3);
-            padding: 15px;
+            padding: 12px;
             border-radius: 10px;
-            margin-top: 10px;
-            height: 120px;
+            margin-top: 12px;
+            height: 140px;
             overflow-y: auto;
             font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            line-height: 1.4;
         }
         
         .log-panel::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
         
         .log-panel::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
+            border-radius: 3px;
         }
         
         .log-panel::-webkit-scrollbar-thumb {
             background: var(--primary-color);
-            border-radius: 4px;
+            border-radius: 3px;
         }
         
         .log-entry {
-            padding: 5px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            word-break: break-word;
         }
         
         .log-time {
             color: var(--text-light);
             font-weight: bold;
+            font-size: 0.8rem;
         }
         
         .log-data {
             color: #69f0ae;
             font-weight: bold;
+        }
+        
+        .android-tip {
+            background-color: rgba(61, 220, 132, 0.1);
+            border: 1px solid #3DDC84;
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+        
+        .android-tip h4 {
+            color: #3DDC84;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .professor-footer {
@@ -346,57 +402,54 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
+            flex-wrap: wrap;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
         
         footer {
             text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
+            margin-top: 25px;
+            padding-top: 15px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             width: 100%;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             opacity: 0.8;
         }
         
-        .compatibility-warning {
-            background-color: rgba(244, 67, 54, 0.2);
-            border: 1px solid var(--error-color);
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 10px;
-            font-size: 0.9rem;
-        }
-        
-        .compatibility-warning h4 {
-            color: var(--error-color);
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
         .keyboard-hint {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-light);
             text-align: center;
-            margin-top: 10px;
+            margin-top: 8px;
             opacity: 0.7;
         }
         
+        /* Estados ativos para feedback visual */
+        .btn-active {
+            background-color: #283593 !important;
+            transform: translateY(4px) !important;
+            box-shadow: 0 1px 0 var(--bg-medium), 0 3px 5px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .android-success {
+            background-color: var(--android-green) !important;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.5) !important;
+        }
+        
+        /* Media Queries para Mobile */
         @media (max-width: 600px) {
             .directional-btn {
-                width: 80px;
-                height: 80px;
+                width: 75px;
+                height: 75px;
                 font-size: 2rem;
             }
             
             h1 {
-                font-size: 2rem;
+                font-size: 1.8rem;
             }
             
             .action-btn {
-                padding: 18px 5px;
+                padding: 16px 6px;
                 font-size: 1.1rem;
             }
             
@@ -404,41 +457,62 @@
                 position: relative;
                 top: 0;
                 right: 0;
-                margin: 10px auto;
+                margin: 0 auto 10px;
                 width: fit-content;
-                font-size: 0.8rem;
+                font-size: 0.75rem;
             }
             
             .connection-btn {
-                padding: 10px 20px;
-                font-size: 1rem;
+                padding: 10px 16px;
+                font-size: 0.9rem;
+                min-width: 130px;
             }
             
             .container {
                 padding: 10px;
+                gap: 20px;
+            }
+            
+            .subtitle {
+                font-size: 0.9rem;
             }
         }
         
         @media (max-width: 400px) {
             .directional-btn {
-                width: 70px;
-                height: 70px;
+                width: 65px;
+                height: 65px;
                 font-size: 1.8rem;
             }
             
             .action-buttons {
                 grid-template-columns: 1fr;
+                max-width: 250px;
             }
             
             h1 {
-                font-size: 1.8rem;
+                font-size: 1.6rem;
+            }
+            
+            .connection-controls {
+                flex-direction: column;
+            }
+            
+            .connection-btn {
+                width: 100%;
+                max-width: 250px;
             }
         }
         
-        .active {
-            background-color: #283593 !important;
-            transform: translateY(5px) !important;
-            box-shadow: 0 0 0 var(--bg-medium), 0 5px 5px rgba(0, 0, 0, 0.2) !important;
+        /* Animações para feedback Android */
+        @keyframes androidPulse {
+            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+        }
+        
+        .android-pulse {
+            animation: androidPulse 1.5s infinite;
         }
     </style>
 </head>
@@ -450,8 +524,8 @@
                 <span>Professor Cleber</span>
             </div>
             
-            <h1>Controle Micro:bit Bluetooth</h1>
-            <p class="subtitle">Conecte-se à sua placa Micro:bit v2 e envie comandos através dos botões e setas direcionais. Funciona em navegadores e dispositivos móveis compatíveis.</p>
+            <h1>Controle Micro:bit Bluetooth <span class="android-badge">Android</span></h1>
+            <p class="subtitle">Controle seu Micro:bit via Bluetooth. Funciona em PC e dispositivos Android.</p>
             
             <div class="bluetooth-status">
                 <i class="fa-brands fa-bluetooth"></i>
@@ -485,56 +559,61 @@
             <div class="action-buttons">
                 <button class="action-btn" id="btn-action1" data-command="e" aria-label="Botão A - Envia comando 'e'">
                     Botão A
-                    <div class="btn-info">Envia: 'e'</div>
+                    <div class="btn-info">Envia: 'e' (Parar)</div>
                 </button>
                 <button class="action-btn" id="btn-action2" data-command="f" aria-label="Botão B - Envia comando 'f'">
                     Botão B
-                    <div class="btn-info">Envia: 'f'</div>
+                    <div class="btn-info">Envia: 'f' (Servo 0°)</div>
                 </button>
                 <button class="action-btn" id="btn-action3" data-command="g" aria-label="Botão C - Envia comando 'g'">
                     Botão C
-                    <div class="btn-info">Envia: 'g'</div>
+                    <div class="btn-info">Envia: 'g' (Servo 45°)</div>
                 </button>
                 <button class="action-btn" id="btn-action4" data-command="h" aria-label="Botão D - Envia comando 'h'">
                     Botão D
-                    <div class="btn-info">Envia: 'h'</div>
+                    <div class="btn-info">Envia: 'h' (Servo 90°)</div>
                 </button>
             </div>
             
-            <p class="keyboard-hint">Dica: Use as setas do teclado (↑ ← → ↓) e teclas 1-4 para controlar</p>
+            <p class="keyboard-hint">Teclas: Setas (↑←→↓) e 1-4 ou A-D para botões</p>
         </main>
         
         <section class="connection-panel">
-            <h2>Conexão Bluetooth</h2>
+            <h2><i class="fas fa-bluetooth"></i> Conexão Bluetooth</h2>
+            
             <div class="connection-controls">
                 <button class="connection-btn connect-btn" id="connect-btn">
-                    <i class="fas fa-link"></i> Conectar ao Micro:bit
+                    <i class="fas fa-link"></i> Conectar
                 </button>
                 <button class="connection-btn disconnect-btn" id="disconnect-btn" disabled>
                     <i class="fas fa-unlink"></i> Desconectar
                 </button>
+                <button class="connection-btn android-debug-btn" id="android-debug">
+                    <i class="fas fa-bug"></i> Debug Android
+                </button>
             </div>
             
-            <div class="compatibility-warning">
-                <h4><i class="fas fa-exclamation-triangle"></i> Compatibilidade</h4>
-                <p>Web Bluetooth funciona em: Chrome/Edge (Windows, Mac, Android), Samsung Internet. <strong>Não funciona no iOS</strong> (iPhone/iPad). Requer HTTPS (fornecido pelo GitHub Pages).</p>
+            <div class="android-tip">
+                <h4><i class="fab fa-android"></i> Dicas para Android:</h4>
+                <p>• Mantenha a tela ligada durante o uso<br>
+                   • Toque nos 3 pontos → "Adicionar à tela inicial"<br>
+                   • Aproxime-se do Micro:bit (≤ 5m)</p>
             </div>
             
             <div class="instructions">
-                <h3><i class="fas fa-info-circle"></i> Instruções de uso:</h3>
+                <h3><i class="fas fa-info-circle"></i> Instruções:</h3>
                 <ul>
-                    <li>Certifique-se que seu Micro:bit está ligado e com Bluetooth ativado</li>
-                    <li>Clique em "Conectar ao Micro:bit" para parear com o dispositivo</li>
-                    <li>Use as setas direcionais para enviar comandos 'a', 'b', 'c', 'd'</li>
-                    <li>Use os botões A, B, C, D para enviar comandos 'e', 'f', 'g', 'h'</li>
-                    <li>Os comandos enviados aparecerão no log abaixo</li>
+                    <li>1. Ligue o Micro:bit e ative Bluetooth</li>
+                    <li>2. Toque em "Conectar" e selecione seu Micro:bit</li>
+                    <li>3. Use setas/botões para enviar comandos</li>
+                    <li>4. Comandos: a=↑, b=←, c=→, d=↓, e=parar</li>
                 </ul>
             </div>
             
             <div class="log-panel" id="log-panel">
                 <div class="log-entry">
                     <span class="log-time">[00:00:00]</span> 
-                    <span>Página carregada. Clique em "Conectar ao Micro:bit" para começar.</span>
+                    <span><i class="fas fa-info-circle" style="color:#bbdefb; margin-right:5px;"></i>Página carregada. Pronto para conectar.</span>
                 </div>
             </div>
             
@@ -546,7 +625,7 @@
         </section>
         
         <footer>
-            <p>Desenvolvido para controle de Micro:bit v2 via Bluetooth | GitHub Pages | Compatível com navegadores e dispositivos móveis</p>
+            <p>Controle Micro:bit v2 via Web Bluetooth | Compatível com PC e Android | GitHub Pages</p>
         </footer>
     </div>
 
@@ -564,8 +643,9 @@
         let microbitDevice = null;
         let isConnected = false;
         let rxCharacteristic = null;
+        let isAndroid = /Android/i.test(navigator.userAgent);
         
-        // FILA DE OPERAÇÕES (Cópia direta do Lofi Robot)
+        // FILA DE OPERAÇÕES (para evitar sobrecarga no Android)
         let queue = Promise.resolve();
         function queueGattOperation(operation) {
            queue = queue.then(operation, operation);
@@ -578,6 +658,7 @@
         const connectionStatus = document.getElementById('connection-status');
         const connectBtn = document.getElementById('connect-btn');
         const disconnectBtn = document.getElementById('disconnect-btn');
+        const debugBtn = document.getElementById('android-debug');
         const logPanel = document.getElementById('log-panel');
         const bluetoothIcon = document.querySelector('.bluetooth-status i');
         const controlButtons = document.querySelectorAll('.directional-btn, .action-btn');
@@ -594,15 +675,28 @@
             
             let icon = "";
             switch(type) {
-                case "command": icon = '<i class="fas fa-paper-plane" style="color:#69f0ae; margin-right:5px;"></i>'; break;
-                case "error": icon = '<i class="fas fa-exclamation-circle" style="color:#ff5252; margin-right:5px;"></i>'; break;
-                case "success": icon = '<i class="fas fa-check-circle" style="color:#69f0ae; margin-right:5px;"></i>'; break;
-                case "info": icon = '<i class="fas fa-info-circle" style="color:#bbdefb; margin-right:5px;"></i>'; break;
-                case "warning": icon = '<i class="fas fa-exclamation-triangle" style="color:#FF9800; margin-right:5px;"></i>'; break;
+                case "command": 
+                    icon = '<i class="fas fa-paper-plane" style="color:#69f0ae; margin-right:5px;"></i>';
+                    logEntry.classList.add('android-success');
+                    break;
+                case "error": 
+                    icon = '<i class="fas fa-exclamation-circle" style="color:#ff5252; margin-right:5px;"></i>';
+                    break;
+                case "success": 
+                    icon = '<i class="fas fa-check-circle" style="color:#4CAF50; margin-right:5px;"></i>';
+                    break;
+                case "info": 
+                    icon = '<i class="fas fa-info-circle" style="color:#bbdefb; margin-right:5px;"></i>';
+                    break;
+                case "warning": 
+                    icon = '<i class="fas fa-exclamation-triangle" style="color:#FF9800; margin-right:5px;"></i>';
+                    break;
+                case "android": 
+                    icon = '<i class="fab fa-android" style="color:#3DDC84; margin-right:5px;"></i>';
+                    break;
             }
             
             let logContent = `<span class="log-time">${timeString}</span> ${icon}<span>${message}</span>`;
-            
             logEntry.innerHTML = logContent;
             logPanel.appendChild(logEntry);
             
@@ -610,7 +704,7 @@
             logPanel.scrollTop = logPanel.scrollHeight;
             
             // Limitar número de logs para performance
-            const maxLogs = 40;
+            const maxLogs = 30;
             if (logPanel.children.length > maxLogs) {
                 logPanel.removeChild(logPanel.firstChild);
             }
@@ -618,16 +712,22 @@
         
         function updateConnectionStatus() {
             if (isConnected) {
-                connectionStatus.textContent = "Conectado ao Micro:bit";
+                connectionStatus.textContent = isAndroid ? "Conectado (Android)" : "Conectado";
                 connectionStatus.classList.remove('status-disconnected');
                 connectionStatus.classList.add('status-connected');
+                if (isAndroid) connectionStatus.classList.add('android-status');
                 bluetoothIcon.classList.remove('status-disconnected');
                 bluetoothIcon.classList.add('status-connected');
                 connectBtn.disabled = true;
                 disconnectBtn.disabled = false;
+                
+                // Adiciona animação para Android
+                if (isAndroid) {
+                    connectionStatus.classList.add('android-pulse');
+                }
             } else {
                 connectionStatus.textContent = "Não conectado";
-                connectionStatus.classList.remove('status-connected');
+                connectionStatus.classList.remove('status-connected', 'android-status', 'android-pulse');
                 connectionStatus.classList.add('status-disconnected');
                 bluetoothIcon.classList.remove('status-connected');
                 bluetoothIcon.classList.add('status-disconnected');
@@ -637,27 +737,38 @@
         }
         
         // ============================================
-        // FUNÇÕES PRINCIPAIS BLUETOOTH
+        // FUNÇÕES PRINCIPAIS BLUETOOTH (COM CORREÇÕES ANDROID)
         // ============================================
         async function connectToMicrobit() {
             console.log('[1] Iniciando conexão Bluetooth...');
+            addLog("Iniciando conexão...", "info");
             
-            // Passo 1: Solicitar o dispositivo (IGUAL ao Lofi Robot)
+            // Passo 1: Solicitar o dispositivo
             try {
                 console.log('[2] Abrindo seletor de dispositivos...');
-                microbitDevice = await navigator.bluetooth.requestDevice({
+                
+                // Configuração específica para Android
+                const requestOptions = {
                     filters: [{ namePrefix: "BBC micro:bit" }],
                     optionalServices: [UART_SERVICE_UUID]
-                });
+                };
+                
+                // Adiciona opções específicas para Android se detectado
+                if (isAndroid) {
+                    requestOptions.acceptAllDevices = false; // Mais estável no Android
+                }
+                
+                microbitDevice = await navigator.bluetooth.requestDevice(requestOptions);
                 console.log('[3] Dispositivo selecionado:', microbitDevice.name);
-                addLog(`Dispositivo selecionado: ${microbitDevice.name}`);
+                addLog(`Dispositivo: ${microbitDevice.name}`, "success");
+                
             } catch (err) {
                 if (err.name === 'NotFoundError') {
-                    console.error('[ERRO] Usuário cancelou ou nenhum dispositivo encontrado');
-                    addLog("Seleção de dispositivo cancelada.", "info");
+                    console.log('[INFO] Usuário cancelou a seleção');
+                    addLog("Seleção cancelada pelo usuário", "info");
                 } else {
-                    console.error('[ERRO] Falha no requestDevice:', err.name, err.message);
-                    addLog(`Erro ao selecionar dispositivo: ${err.message}`, "error");
+                    console.error('[ERRO] Falha no requestDevice:', err);
+                    addLog(`Erro: ${err.message}`, "error");
                 }
                 return;
             }
@@ -665,11 +776,19 @@
             // Passo 2: Conectar ao GATT Server
             try {
                 console.log('[4] Conectando ao servidor GATT...');
-                addLog("Conectando ao Micro:bit...", "info");
-                const server = await microbitDevice.gatt.connect();
+                addLog("Conectando...", "info");
+                
+                // Timeout específico para Android (mais lento)
+                const connectTimeout = isAndroid ? 10000 : 5000;
+                const connectPromise = microbitDevice.gatt.connect();
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout de conexão')), connectTimeout)
+                );
+                
+                const server = await Promise.race([connectPromise, timeoutPromise]);
                 console.log('[5] Conectado ao servidor GATT.');
                 
-                // Configurar listener para desconexão (IGUAL ao Lofi Robot)
+                // Configurar listener para desconexão
                 microbitDevice.addEventListener('gattserverdisconnected', onDisconnected);
                 
                 // Passo 3: Obter o serviço UART
@@ -677,42 +796,73 @@
                 const service = await server.getPrimaryService(UART_SERVICE_UUID);
                 console.log('[7] Serviço UART encontrado!');
 
-                // Passo 4: OBTER E CONFIGURAR AS CARACTERÍSTICAS (SEGUNDO O LOFI ROBOT)
+                // Passo 4: Obter e configurar características (SEGUNDO O PADRÃO ANDROID)
                 console.log('[8] Obtendo característica TX...');
                 
-                // 4.1 - PRIMEIRO a TX (onde o Micro:bit ESCREVE / a página LÊ)
+                // PRIMEIRO a TX (onde o Micro:bit ESCREVE)
                 const txCharacteristic = await service.getCharacteristic(UART_TX_CHARACTERISTIC_UUID);
                 
-                // 4.2 - INICIAR NOTIFICAÇÕES na TX (IGUAL ao Lofi Robot)
+                // INICIAR NOTIFICAÇÕES na TX
                 await txCharacteristic.startNotifications();
                 txCharacteristic.addEventListener('characteristicvaluechanged', onTxCharacteristicValueChanged);
                 console.log('[9] Notificações na TX ativadas.');
 
-                // 4.3 - DEPOIS a RX (onde a página ESCREVE / o Micro:bit LÊ)
+                // DEPOIS a RX (onde a página ESCREVE)
                 console.log('[10] Obtendo característica RX...');
                 rxCharacteristic = await service.getCharacteristic(UART_RX_CHARACTERISTIC_UUID);
                 console.log('[11] Característica RX armazenada para envio.');
 
+                // === CORREÇÃO CRÍTICA PARA ANDROID ===
+                console.log('[12] Preparando conexão para Android...');
+                if (isAndroid) {
+                    try {
+                        // "Aquece" a conexão com um teste
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        
+                        // Testa com byte simples para ativar o canal
+                        const testData = new TextEncoder().encode("\n");
+                        await rxCharacteristic.writeValue(testData);
+                        
+                        console.log('[13] Conexão Android preparada com sucesso!');
+                        addLog("📱 Otimizado para Android", "android");
+                        
+                    } catch (androidError) {
+                        console.warn('[AVISO] Preparação Android falhou:', androidError.message);
+                        // Não bloqueia, só registra o aviso
+                    }
+                }
+                // === FIM DA CORREÇÃO ANDROID ===
+
                 // Sucesso total!
-                console.log('[12] Configuração completa!');
+                console.log('[14] Configuração completa!');
                 isConnected = true;
                 updateConnectionStatus();
                 addLog("✅ Conexão estabelecida com sucesso!", "success");
                 
+                // Log específico para Android
+                if (isAndroid) {
+                    addLog("Pronto para enviar comandos", "android");
+                }
+                
             } catch (err) {
                 console.error('[ERRO] Falha na conexão:', err.name, err.message);
                 
+                // Tratamento específico de erros
+                let errorMsg = `Erro: ${err.message}`;
                 if (err.name === 'NotSupportedError') {
-                    addLog("❌ ERRO: O Micro:bit não suporta o serviço UART necessário.", "error");
-                    addLog("Solução: Instale o firmware 'all services' no Micro:bit.", "info");
-                } else {
-                    addLog(`❌ Erro na conexão: ${err.message}`, "error");
+                    errorMsg = "Micro:bit não suporta o serviço necessário";
+                } else if (err.message.includes('Timeout')) {
+                    errorMsg = "Timeout - tente novamente";
+                } else if (err.message.includes('GATT')) {
+                    errorMsg = "Erro GATT - reconecte";
                 }
+                
+                addLog(`❌ ${errorMsg}`, "error");
                 
                 isConnected = false;
                 updateConnectionStatus();
                 
-                // Tentar desconectar se algo deu errado
+                // Limpa recursos em caso de erro
                 if (microbitDevice && microbitDevice.gatt.connected) {
                     try {
                         microbitDevice.gatt.disconnect();
@@ -726,7 +876,7 @@
         function onDisconnected(event) {
             console.log('[!] Dispositivo desconectado.');
             const device = event.target;
-            addLog(`Dispositivo ${device.name} foi desconectado.`, "info");
+            addLog(`${device.name} desconectado`, "warning");
             
             isConnected = false;
             microbitDevice = null;
@@ -737,72 +887,184 @@
         function onTxCharacteristicValueChanged(event) {
             try {
                 let receivedData = [];
-                for (var i = 0; i < event.target.value.byteLength; i++) {
+                for (let i = 0; i < event.target.value.byteLength; i++) {
                     receivedData[i] = event.target.value.getUint8(i);
                 }
                 const receivedString = String.fromCharCode.apply(null, receivedData);
-                console.log('[Dado Recebido do Micro:bit]', receivedString);
-                addLog(`Micro:bit diz: "${receivedString}"`, "info");
+                console.log('[Dado Recebido]', receivedString);
+                
+                // Mostra no log se não for vazio
+                if (receivedString.trim().length > 0) {
+                    addLog(`Micro:bit → "${receivedString}"`, "info");
+                }
+                
             } catch (err) {
                 console.error('Erro ao processar dado recebido:', err);
             }
         }
         
+        // ============================================
+        // FUNÇÃO DE ENVIO DE COMANDOS (OTIMIZADA PARA ANDROID)
+        // ============================================
         async function sendCommand(command) {
-            if (!isConnected || !rxCharacteristic) {
-                addLog("❌ Não conectado ao Micro:bit.", "error");
+            // VALIDAÇÃO ROBUSTA
+            if (!isConnected) {
+                addLog("❌ Não conectado ao Micro:bit", "error");
                 return;
             }
             
+            if (!rxCharacteristic) {
+                console.error('ERRO: rxCharacteristic não existe!');
+                addLog("❌ Erro interno - reconecte", "error");
+                isConnected = false;
+                updateConnectionStatus();
+                return;
+            }
+            
+            // VERIFICA SE A CONEXÃO AINDA ESTÁ VIVA
+            if (microbitDevice && !microbitDevice.gatt.connected) {
+                console.warn('Conexão GATT perdida silenciosamente!');
+                isConnected = false;
+                updateConnectionStatus();
+                addLog("⚡ Conexão perdida - reconecte", "warning");
+                return;
+            }
+            
+            console.log(`[ENVIO] Comando: "${command}"`);
+            
             try {
                 const encoder = new TextEncoder();
-                // ENVIA o comando + quebra de linha (\n), IGUAL ao Lofi Robot
+                // FORMATO: comando + \n (funciona em Android e desktop)
                 const data = encoder.encode(command + "\n");
                 
-                // USA A FILA para evitar sobrecarga
-                await queueGattOperation(() => 
-                    rxCharacteristic.writeValue(data)
-                        .then(() => console.log("Comando enviado:", command))
-                        .catch(error => {
-                            console.error('Erro ao enviar:', error);
-                            throw error;
-                        })
-                );
-                
-                addLog(`Enviado: "${command}"`, "command");
-                
-                // Feedback visual no botão pressionado
-                const button = document.querySelector(`[data-command="${command}"]`);
-                if (button) {
-                    button.classList.add('active');
-                    setTimeout(() => {
-                        button.classList.remove('active');
-                    }, 200);
+                // Método otimizado para Android
+                if (isAndroid) {
+                    // Usa a fila para evitar sobrecarga
+                    await queueGattOperation(() => 
+                        rxCharacteristic.writeValue(data)
+                    );
+                } else {
+                    // Para desktop, envio direto
+                    await rxCharacteristic.writeValue(data);
                 }
                 
-            } catch (error) {
-                console.error('[ERRO ao Enviar]', error);
-                addLog(`Falha ao enviar "${command}": ${error.message}`, "error");
+                console.log(`✅ Comando "${command}" ENVIADO!`);
+                addLog(`📱 ${command} → Micro:bit`, "command");
                 
-                // Se houver erro de desconexão, atualize o status
-                if (error.message.includes('disconnected') || error.message.includes('GATT')) {
+                // FEEDBACK VISUAL FORTE
+                highlightButton(command);
+                
+            } catch (error) {
+                console.error('❌ ERRO NO ENVIO:', error.name, error.message);
+                
+                // TRATAMENTO ESPECÍFICO PARA ANDROID
+                if (error.name === 'NetworkError') {
+                    addLog("📡 Erro de rede Bluetooth", "error");
+                    addLog("Aproxime-se do Micro:bit", "info");
+                } 
+                else if (error.message.includes('GATT') || error.message.includes('not connected')) {
+                    addLog("🔌 Erro de conexão", "error");
                     isConnected = false;
                     updateConnectionStatus();
                 }
+                else if (error.message.includes('Timeout')) {
+                    addLog("⏱️ Timeout - tente novamente", "warning");
+                }
+                else {
+                    addLog(`Erro: ${error.message.substring(0, 40)}`, "error");
+                }
             }
+        }
+        
+        function highlightButton(command) {
+            const button = document.querySelector(`[data-command="${command}"]`);
+            if (!button) return;
+            
+            const originalBg = button.style.backgroundColor;
+            const originalTransform = button.style.transform;
+            
+            button.classList.add('btn-active');
+            if (isAndroid) {
+                button.classList.add('android-success');
+            }
+            
+            setTimeout(() => {
+                button.classList.remove('btn-active', 'android-success');
+                button.style.backgroundColor = originalBg;
+                button.style.transform = originalTransform;
+            }, 300);
         }
         
         function disconnectFromMicrobit() {
             if (microbitDevice && microbitDevice.gatt.connected) {
                 microbitDevice.gatt.disconnect();
-                addLog("Desconectando do Micro:bit...", "info");
+                addLog("Desconectando...", "info");
             } else {
                 isConnected = false;
                 microbitDevice = null;
                 rxCharacteristic = null;
                 updateConnectionStatus();
-                addLog("Micro:bit desconectado.", "info");
+                addLog("Micro:bit desconectado", "info");
             }
+        }
+        
+        // ============================================
+        // FUNÇÃO DE DEBUG PARA ANDROID
+        // ============================================
+        async function runAndroidDebug() {
+            console.group('=== DEBUG ANDROID ===');
+            addLog("🔧 Executando diagnóstico Android...", "android");
+            
+            // 1. Verifica permissões
+            try {
+                const btPermission = await navigator.permissions.query({name: 'bluetooth'});
+                console.log('1. Permissão Bluetooth:', btPermission.state);
+                addLog(`Permissão: ${btPermission.state}`, "info");
+            } catch (e) {
+                console.log('1. Não foi possível verificar permissões:', e);
+            }
+            
+            // 2. Verifica disponibilidade
+            try {
+                const btAvailable = await navigator.bluetooth.getAvailability();
+                console.log('2. Bluetooth disponível:', btAvailable);
+                addLog(`Bluetooth ativo: ${btAvailable ? 'Sim' : 'Não'}`, btAvailable ? "success" : "error");
+            } catch (e) {
+                console.log('2. Não foi possível verificar disponibilidade:', e);
+            }
+            
+            // 3. Status da conexão atual
+            console.log('3. Status atual:', {
+                isConnected,
+                device: microbitDevice ? microbitDevice.name : 'null',
+                gattConnected: microbitDevice?.gatt?.connected || false,
+                rxCharacteristic: rxCharacteristic ? 'existe' : 'null'
+            });
+            
+            addLog(`Status: ${isConnected ? 'Conectado' : 'Desconectado'}`, 
+                   isConnected ? "success" : "warning");
+            
+            // 4. Testa envio de byte simples se conectado
+            if (isConnected && rxCharacteristic) {
+                try {
+                    console.log('4. Testando envio de byte teste...');
+                    await rxCharacteristic.writeValue(new Uint8Array([65, 10])); // "A\n"
+                    console.log('✅ Byte teste enviado!');
+                    addLog("Teste: byte enviado com sucesso", "success");
+                } catch (e) {
+                    console.error('❌ Falha no byte teste:', e);
+                    addLog(`Teste falhou: ${e.message}`, "error");
+                }
+            }
+            
+            // 5. Informações do navegador
+            console.log('5. User Agent:', navigator.userAgent);
+            console.log('6. É Android?', isAndroid);
+            
+            addLog(`Navegador: ${isAndroid ? 'Android' : 'Desktop'}`, "info");
+            
+            console.groupEnd();
+            addLog("Diagnóstico completo", "android");
         }
         
         // ============================================
@@ -810,137 +1072,56 @@
         // ============================================
         function setupControlButtons() {
             controlButtons.forEach(button => {
+                // Clique normal
                 button.addEventListener('click', () => {
                     const command = button.getAttribute('data-command');
                     sendCommand(command);
                 });
                 
-                // Eventos para touch (melhor experiência móvel)
+                // Touch events para mobile
                 button.addEventListener('touchstart', (e) => {
                     e.preventDefault();
-                    button.style.transform = 'translateY(5px)';
-                    button.style.boxShadow = '0 0 0 var(--bg-medium), 0 5px 5px rgba(0, 0, 0, 0.2)';
-                });
+                    button.style.opacity = '0.8';
+                    button.style.transform = 'scale(0.95)';
+                }, { passive: false });
                 
                 button.addEventListener('touchend', (e) => {
                     e.preventDefault();
+                    button.style.opacity = '';
                     button.style.transform = '';
-                    button.style.boxShadow = '';
-                });
+                }, { passive: false });
             });
         }
         
         function setupKeyboardControls() {
             document.addEventListener('keydown', (event) => {
-                // Evitar conflitos com teclas de atalho do navegador
+                // Evita conflitos com teclas de atalho
                 if (event.ctrlKey || event.metaKey || event.altKey) return;
                 
                 let command = null;
-                let buttonId = null;
                 
                 switch(event.key) {
-                    case 'ArrowUp':
-                        command = 'a';
-                        buttonId = 'btn-up';
-                        break;
-                    case 'ArrowLeft':
-                        command = 'b';
-                        buttonId = 'btn-left';
-                        break;
-                    case 'ArrowRight':
-                        command = 'c';
-                        buttonId = 'btn-right';
-                        break;
-                    case 'ArrowDown':
-                        command = 'd';
-                        buttonId = 'btn-down';
-                        break;
-                    case '1':
-                        command = 'e';
-                        buttonId = 'btn-action1';
-                        break;
-                    case '2':
-                        command = 'f';
-                        buttonId = 'btn-action2';
-                        break;
-                    case '3':
-                        command = 'g';
-                        buttonId = 'btn-action3';
-                        break;
-                    case '4':
-                        command = 'h';
-                        buttonId = 'btn-action4';
-                        break;
+                    case 'ArrowUp': command = 'a'; break;
+                    case 'ArrowLeft': command = 'b'; break;
+                    case 'ArrowRight': command = 'c'; break;
+                    case 'ArrowDown': command = 'd'; break;
+                    case '1': command = 'e'; break;
+                    case '2': command = 'f'; break;
+                    case '3': command = 'g'; break;
+                    case '4': command = 'h'; break;
                     case 'a':
-                    case 'A':
-                        if (!event.ctrlKey && !event.metaKey) {
-                            command = 'e';
-                            buttonId = 'btn-action1';
-                        }
-                        break;
+                    case 'A': if (!event.ctrlKey) command = 'e'; break;
                     case 'b':
-                    case 'B':
-                        command = 'f';
-                        buttonId = 'btn-action2';
-                        break;
+                    case 'B': command = 'f'; break;
                     case 'c':
-                    case 'C':
-                        command = 'g';
-                        buttonId = 'btn-action3';
-                        break;
+                    case 'C': command = 'g'; break;
                     case 'd':
-                    case 'D':
-                        command = 'h';
-                        buttonId = 'btn-action4';
-                        break;
+                    case 'D': command = 'h'; break;
                 }
                 
                 if (command) {
                     sendCommand(command);
-                    if (buttonId) {
-                        const button = document.getElementById(buttonId);
-                        if (button) {
-                            button.classList.add('active');
-                        }
-                    }
                     event.preventDefault();
-                }
-            });
-            
-            document.addEventListener('keyup', (event) => {
-                switch(event.key) {
-                    case 'ArrowUp':
-                        document.getElementById('btn-up').classList.remove('active');
-                        break;
-                    case 'ArrowLeft':
-                        document.getElementById('btn-left').classList.remove('active');
-                        break;
-                    case 'ArrowRight':
-                        document.getElementById('btn-right').classList.remove('active');
-                        break;
-                    case 'ArrowDown':
-                        document.getElementById('btn-down').classList.remove('active');
-                        break;
-                    case '1':
-                    case 'a':
-                    case 'A':
-                        document.getElementById('btn-action1').classList.remove('active');
-                        break;
-                    case '2':
-                    case 'b':
-                    case 'B':
-                        document.getElementById('btn-action2').classList.remove('active');
-                        break;
-                    case '3':
-                    case 'c':
-                    case 'C':
-                        document.getElementById('btn-action3').classList.remove('active');
-                        break;
-                    case '4':
-                    case 'd':
-                    case 'D':
-                        document.getElementById('btn-action4').classList.remove('active');
-                        break;
                 }
             });
         }
@@ -950,12 +1131,22 @@
         // ============================================
         function initApp() {
             console.log('🚀 Inicializando aplicação...');
-            addLog("Aplicação inicializada. Aguardando conexão...", "info");
+            console.log('User Agent:', navigator.userAgent);
+            console.log('É Android?', isAndroid);
+            
+            addLog("Aplicação inicializada", "info");
+            
+            if (isAndroid) {
+                addLog("📱 Modo Android detectado", "android");
+                document.title += " (Android)";
+            }
             
             // Verificar suporte a Web Bluetooth
             if (!navigator.bluetooth) {
-                addLog("❌ Seu navegador não suporta Web Bluetooth API.", "error");
-                addLog("Use Chrome, Edge ou Samsung Internet no Android.", "info");
+                const errorMsg = "Seu navegador não suporta Web Bluetooth";
+                console.error(errorMsg);
+                addLog(`❌ ${errorMsg}`, "error");
+                addLog("Use Chrome/Edge no Android ou desktop", "info");
                 connectBtn.disabled = true;
                 connectBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Navegador incompatível';
                 return;
@@ -964,28 +1155,64 @@
             // Configurar eventos
             connectBtn.addEventListener('click', connectToMicrobit);
             disconnectBtn.addEventListener('click', disconnectFromMicrobit);
+            debugBtn.addEventListener('click', runAndroidDebug);
             setupControlButtons();
             setupKeyboardControls();
             
             // Estado inicial
             updateConnectionStatus();
             
-            // Adicionar mensagem sobre GitHub Pages
+            // Detectar se estamos no GitHub Pages
             if (window.location.hostname.includes('github.io')) {
-                addLog("🌐 Hospedado no GitHub Pages com HTTPS", "success");
+                addLog("🌐 Hospedado no GitHub Pages", "success");
+            }
+            
+            // Dica para Android
+            if (isAndroid) {
+                setTimeout(() => {
+                    addLog("💡 Dica: Adicione esta página à tela inicial", "android");
+                }, 2000);
             }
         }
         
-        // Iniciar a aplicação quando o DOM estiver carregado
-        document.addEventListener('DOMContentLoaded', initApp);
+        // Iniciar quando o DOM estiver carregado
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
         
-        // Prevenir comportamento padrão em toques longos
+        // Prevenir menu de contexto em botões (mobile)
         document.addEventListener('contextmenu', (e) => {
-            if (e.target.classList.contains('directional-btn') || 
-                e.target.classList.contains('action-btn')) {
+            if (e.target.closest('.directional-btn') || e.target.closest('.action-btn')) {
                 e.preventDefault();
             }
         });
+        
+        // Manter tela ativa (especialmente para Android)
+        let wakeLock = null;
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator && isAndroid) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock ativado para Android');
+                } catch (err) {
+                    console.log('Wake Lock não suportado:', err);
+                }
+            }
+        }
+        
+        // Ativa wake lock quando a página ganha foco
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && isAndroid) {
+                requestWakeLock();
+            }
+        });
+        
+        // Ativa wake lock inicial
+        if (isAndroid) {
+            requestWakeLock();
+        }
     </script>
 </body>
 </html>
