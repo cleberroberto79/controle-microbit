@@ -7,7 +7,7 @@
     <meta name="description" content="Controle sua placa Micro:bit v2 via Bluetooth. Interface web responsiva com setas e botões para envio de comandos.">
     <meta name="keywords" content="micro:bit, bluetooth, controle, professor cleber, web bluetooth, javascript">
     <meta name="author" content="Professor Cleber">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         :root {
@@ -551,34 +551,40 @@
     </div>
 
     <script>
-        // Verificação de compatibilidade com Web Bluetooth
-        function checkBluetoothSupport() {
-            if (!navigator.bluetooth) {
-                addLog("❌ Seu navegador não suporta Web Bluetooth API", "erro");
-                addLog("Use Chrome, Edge ou Samsung Internet no Android", "info");
-                return false;
-            }
-            return true;
+        // ============================================
+        // CONSTANTES E CONFIGURAÇÕES
+        // ============================================
+        const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const UART_TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+        const UART_RX_CHARACTERISTIC_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+        
+        // ============================================
+        // VARIÁVEIS GLOBAIS
+        // ============================================
+        let microbitDevice = null;
+        let isConnected = false;
+        let rxCharacteristic = null;
+        
+        // FILA DE OPERAÇÕES (Cópia direta do Lofi Robot)
+        let queue = Promise.resolve();
+        function queueGattOperation(operation) {
+           queue = queue.then(operation, operation);
+           return queue;
         }
         
-        // Elementos da interface
+        // ============================================
+        // ELEMENTOS DA INTERFACE
+        // ============================================
         const connectionStatus = document.getElementById('connection-status');
         const connectBtn = document.getElementById('connect-btn');
         const disconnectBtn = document.getElementById('disconnect-btn');
         const logPanel = document.getElementById('log-panel');
         const bluetoothIcon = document.querySelector('.bluetooth-status i');
-        
-        // Elementos dos botões de controle
         const controlButtons = document.querySelectorAll('.directional-btn, .action-btn');
         
-        // Variáveis para a conexão Bluetooth
-        let microbitDevice = null;
-        let uartService = null;
-        let txCharacteristic = null;
-        let rxCharacteristic = null;
-        let isConnected = false;
-        
-        // Adicionar logs ao painel
+        // ============================================
+        // FUNÇÕES DE LOG E INTERFACE
+        // ============================================
         function addLog(message, type = "info") {
             const now = new Date();
             const timeString = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
@@ -586,17 +592,16 @@
             const logEntry = document.createElement('div');
             logEntry.className = 'log-entry';
             
-            let logContent = `<span class="log-time">${timeString}</span> <span>${message}</span>`;
-            
-            if (type === "command") {
-                logContent = logContent.replace('<span>', '<span><i class="fas fa-paper-plane" style="color:#69f0ae; margin-right:5px;"></i> ');
-            } else if (type === "error") {
-                logContent = logContent.replace('<span>', '<span><i class="fas fa-exclamation-circle" style="color:#ff5252; margin-right:5px;"></i> ');
-            } else if (type === "success") {
-                logContent = logContent.replace('<span>', '<span><i class="fas fa-check-circle" style="color:#69f0ae; margin-right:5px;"></i> ');
-            } else if (type === "info") {
-                logContent = logContent.replace('<span>', '<span><i class="fas fa-info-circle" style="color:#bbdefb; margin-right:5px;"></i> ');
+            let icon = "";
+            switch(type) {
+                case "command": icon = '<i class="fas fa-paper-plane" style="color:#69f0ae; margin-right:5px;"></i>'; break;
+                case "error": icon = '<i class="fas fa-exclamation-circle" style="color:#ff5252; margin-right:5px;"></i>'; break;
+                case "success": icon = '<i class="fas fa-check-circle" style="color:#69f0ae; margin-right:5px;"></i>'; break;
+                case "info": icon = '<i class="fas fa-info-circle" style="color:#bbdefb; margin-right:5px;"></i>'; break;
+                case "warning": icon = '<i class="fas fa-exclamation-triangle" style="color:#FF9800; margin-right:5px;"></i>'; break;
             }
+            
+            let logContent = `<span class="log-time">${timeString}</span> ${icon}<span>${message}</span>`;
             
             logEntry.innerHTML = logContent;
             logPanel.appendChild(logEntry);
@@ -605,13 +610,12 @@
             logPanel.scrollTop = logPanel.scrollHeight;
             
             // Limitar número de logs para performance
-            const maxLogs = 50;
+            const maxLogs = 40;
             if (logPanel.children.length > maxLogs) {
                 logPanel.removeChild(logPanel.firstChild);
             }
         }
         
-        // Atualizar status da conexão
         function updateConnectionStatus() {
             if (isConnected) {
                 connectionStatus.textContent = "Conectado ao Micro:bit";
@@ -621,7 +625,6 @@
                 bluetoothIcon.classList.add('status-connected');
                 connectBtn.disabled = true;
                 disconnectBtn.disabled = false;
-                addLog("✅ Conectado ao Micro:bit", "success");
             } else {
                 connectionStatus.textContent = "Não conectado";
                 connectionStatus.classList.remove('status-connected');
@@ -633,100 +636,140 @@
             }
         }
         
-        // Conectar ao Micro:bit via Bluetooth
+        // ============================================
+        // FUNÇÕES PRINCIPAIS BLUETOOTH
+        // ============================================
         async function connectToMicrobit() {
-            if (!checkBluetoothSupport()) return;
+            console.log('[1] Iniciando conexão Bluetooth...');
             
+            // Passo 1: Solicitar o dispositivo (IGUAL ao Lofi Robot)
             try {
-                addLog("🔍 Procurando dispositivos Bluetooth...", "info");
-                
-                // Solicitar dispositivo Micro:bit via Bluetooth
+                console.log('[2] Abrindo seletor de dispositivos...');
                 microbitDevice = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: "BBC micro:bit" }],
-                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] // Serviço UART
+                    optionalServices: [UART_SERVICE_UUID]
                 });
-                
-                addLog(`📱 Dispositivo encontrado: ${microbitDevice.name}`, "success");
-                
-                // Conectar ao dispositivo
-                addLog("🔄 Conectando ao dispositivo...", "info");
+                console.log('[3] Dispositivo selecionado:', microbitDevice.name);
+                addLog(`Dispositivo selecionado: ${microbitDevice.name}`);
+            } catch (err) {
+                if (err.name === 'NotFoundError') {
+                    console.error('[ERRO] Usuário cancelou ou nenhum dispositivo encontrado');
+                    addLog("Seleção de dispositivo cancelada.", "info");
+                } else {
+                    console.error('[ERRO] Falha no requestDevice:', err.name, err.message);
+                    addLog(`Erro ao selecionar dispositivo: ${err.message}`, "error");
+                }
+                return;
+            }
+
+            // Passo 2: Conectar ao GATT Server
+            try {
+                console.log('[4] Conectando ao servidor GATT...');
+                addLog("Conectando ao Micro:bit...", "info");
                 const server = await microbitDevice.gatt.connect();
+                console.log('[5] Conectado ao servidor GATT.');
                 
-                // Obter o serviço UART
-                addLog("⚙️ Obtendo serviço UART...", "info");
-                uartService = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+                // Configurar listener para desconexão (IGUAL ao Lofi Robot)
+                microbitDevice.addEventListener('gattserverdisconnected', onDisconnected);
                 
-                // Obter características TX e RX
-                addLog("🔧 Obtendo características...", "info");
-                txCharacteristic = await uartService.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e'); // TX
-                rxCharacteristic = await uartService.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e'); // RX
+                // Passo 3: Obter o serviço UART
+                console.log('[6] Buscando o serviço UART...');
+                const service = await server.getPrimaryService(UART_SERVICE_UUID);
+                console.log('[7] Serviço UART encontrado!');
+
+                // Passo 4: OBTER E CONFIGURAR AS CARACTERÍSTICAS (SEGUNDO O LOFI ROBOT)
+                console.log('[8] Obtendo característica TX...');
                 
-                // Configurar notificações para dados recebidos
-                rxCharacteristic.addEventListener('characteristicvaluechanged', handleReceivedData);
-                await rxCharacteristic.startNotifications();
+                // 4.1 - PRIMEIRO a TX (onde o Micro:bit ESCREVE / a página LÊ)
+                const txCharacteristic = await service.getCharacteristic(UART_TX_CHARACTERISTIC_UUID);
                 
-                // Atualizar estado da conexão
+                // 4.2 - INICIAR NOTIFICAÇÕES na TX (IGUAL ao Lofi Robot)
+                await txCharacteristic.startNotifications();
+                txCharacteristic.addEventListener('characteristicvaluechanged', onTxCharacteristicValueChanged);
+                console.log('[9] Notificações na TX ativadas.');
+
+                // 4.3 - DEPOIS a RX (onde a página ESCREVE / o Micro:bit LÊ)
+                console.log('[10] Obtendo característica RX...');
+                rxCharacteristic = await service.getCharacteristic(UART_RX_CHARACTERISTIC_UUID);
+                console.log('[11] Característica RX armazenada para envio.');
+
+                // Sucesso total!
+                console.log('[12] Configuração completa!');
                 isConnected = true;
                 updateConnectionStatus();
-                addLog("✅ Conexão estabelecida com sucesso! Você já pode enviar comandos.", "success");
+                addLog("✅ Conexão estabelecida com sucesso!", "success");
                 
-                // Monitorar desconexão
-                microbitDevice.addEventListener('gattserverdisconnected', handleDisconnection);
+            } catch (err) {
+                console.error('[ERRO] Falha na conexão:', err.name, err.message);
                 
-            } catch (error) {
-                if (error.name === 'NotFoundError') {
-                    addLog("❌ Nenhum dispositivo Micro:bit encontrado", "error");
-                    addLog("Certifique-se que o Micro:bit está ligado e com Bluetooth ativado", "info");
-                } else if (error.name === 'SecurityError') {
-                    addLog("❌ Erro de segurança: A página precisa ser servida via HTTPS", "error");
+                if (err.name === 'NotSupportedError') {
+                    addLog("❌ ERRO: O Micro:bit não suporta o serviço UART necessário.", "error");
+                    addLog("Solução: Instale o firmware 'all services' no Micro:bit.", "info");
                 } else {
-                    addLog(`❌ Erro na conexão: ${error.message}`, "error");
+                    addLog(`❌ Erro na conexão: ${err.message}`, "error");
                 }
-                console.error('Erro na conexão Bluetooth:', error);
+                
                 isConnected = false;
                 updateConnectionStatus();
+                
+                // Tentar desconectar se algo deu errado
+                if (microbitDevice && microbitDevice.gatt.connected) {
+                    try {
+                        microbitDevice.gatt.disconnect();
+                    } catch (e) {
+                        console.warn('Não foi possível desconectar:', e);
+                    }
+                }
             }
         }
         
-        // Desconectar do Micro:bit
-        function disconnectFromMicrobit() {
-            if (microbitDevice && microbitDevice.gatt.connected) {
-                microbitDevice.gatt.disconnect();
-            }
-            handleDisconnection();
-        }
-        
-        // Manipular desconexão
-        function handleDisconnection() {
+        function onDisconnected(event) {
+            console.log('[!] Dispositivo desconectado.');
+            const device = event.target;
+            addLog(`Dispositivo ${device.name} foi desconectado.`, "info");
+            
             isConnected = false;
             microbitDevice = null;
-            uartService = null;
-            txCharacteristic = null;
             rxCharacteristic = null;
             updateConnectionStatus();
-            addLog("🔌 Desconectado do Micro:bit", "info");
         }
         
-        // Manipular dados recebidos
-        function handleReceivedData(event) {
-            const value = event.target.value;
-            const decoder = new TextDecoder();
-            const receivedString = decoder.decode(value);
-            addLog(`📥 Dados recebidos: "${receivedString}"`, "info");
+        function onTxCharacteristicValueChanged(event) {
+            try {
+                let receivedData = [];
+                for (var i = 0; i < event.target.value.byteLength; i++) {
+                    receivedData[i] = event.target.value.getUint8(i);
+                }
+                const receivedString = String.fromCharCode.apply(null, receivedData);
+                console.log('[Dado Recebido do Micro:bit]', receivedString);
+                addLog(`Micro:bit diz: "${receivedString}"`, "info");
+            } catch (err) {
+                console.error('Erro ao processar dado recebido:', err);
+            }
         }
         
-        // Enviar comando para o Micro:bit
         async function sendCommand(command) {
-            if (!isConnected || !txCharacteristic) {
-                addLog("❌ Não conectado ao Micro:bit", "error");
+            if (!isConnected || !rxCharacteristic) {
+                addLog("❌ Não conectado ao Micro:bit.", "error");
                 return;
             }
             
             try {
                 const encoder = new TextEncoder();
-                const data = encoder.encode(command);
-                await txCharacteristic.writeValue(data);
-                addLog(`✈️ Comando enviado: "${command}"`, "command");
+                // ENVIA o comando + quebra de linha (\n), IGUAL ao Lofi Robot
+                const data = encoder.encode(command + "\n");
+                
+                // USA A FILA para evitar sobrecarga
+                await queueGattOperation(() => 
+                    rxCharacteristic.writeValue(data)
+                        .then(() => console.log("Comando enviado:", command))
+                        .catch(error => {
+                            console.error('Erro ao enviar:', error);
+                            throw error;
+                        })
+                );
+                
+                addLog(`Enviado: "${command}"`, "command");
                 
                 // Feedback visual no botão pressionado
                 const button = document.querySelector(`[data-command="${command}"]`);
@@ -738,15 +781,35 @@
                 }
                 
             } catch (error) {
-                addLog(`❌ Erro ao enviar comando: ${error.message}`, "error");
-                console.error('Erro ao enviar comando:', error);
+                console.error('[ERRO ao Enviar]', error);
+                addLog(`Falha ao enviar "${command}": ${error.message}`, "error");
+                
+                // Se houver erro de desconexão, atualize o status
+                if (error.message.includes('disconnected') || error.message.includes('GATT')) {
+                    isConnected = false;
+                    updateConnectionStatus();
+                }
             }
         }
         
-        // Configurar eventos dos botões
+        function disconnectFromMicrobit() {
+            if (microbitDevice && microbitDevice.gatt.connected) {
+                microbitDevice.gatt.disconnect();
+                addLog("Desconectando do Micro:bit...", "info");
+            } else {
+                isConnected = false;
+                microbitDevice = null;
+                rxCharacteristic = null;
+                updateConnectionStatus();
+                addLog("Micro:bit desconectado.", "info");
+            }
+        }
+        
+        // ============================================
+        // CONFIGURAÇÃO DE EVENTOS
+        // ============================================
         function setupControlButtons() {
             controlButtons.forEach(button => {
-                // Evento de clique
                 button.addEventListener('click', () => {
                     const command = button.getAttribute('data-command');
                     sendCommand(command);
@@ -767,9 +830,11 @@
             });
         }
         
-        // Configurar eventos de teclado para controle por teclas
         function setupKeyboardControls() {
             document.addEventListener('keydown', (event) => {
+                // Evitar conflitos com teclas de atalho do navegador
+                if (event.ctrlKey || event.metaKey || event.altKey) return;
+                
                 let command = null;
                 let buttonId = null;
                 
@@ -880,56 +945,30 @@
             });
         }
         
-        // Verificar se estamos em HTTPS (requisito do Web Bluetooth)
-        function checkHTTPS() {
-            if (window.location.protocol !== 'https:' && 
-                window.location.hostname !== 'localhost' && 
-                window.location.hostname !== '127.0.0.1') {
-                
-                addLog("⚠️ Web Bluetooth requer HTTPS para funcionar na web pública", "warning");
-                addLog("GitHub Pages fornece HTTPS automaticamente", "info");
-                return false;
-            }
-            return true;
-        }
-        
-        // Inicialização da aplicação
+        // ============================================
+        // INICIALIZAÇÃO
+        // ============================================
         function initApp() {
-            // Adicionar mensagem inicial
-            addLog("🚀 Aplicação inicializada. Aguardando conexão...", "info");
-            addLog("📱 Use um dispositivo Android ou computador para Bluetooth", "info");
+            console.log('🚀 Inicializando aplicação...');
+            addLog("Aplicação inicializada. Aguardando conexão...", "info");
             
-            // Verificar HTTPS
-            checkHTTPS();
-            
-            // Verificar suporte a Bluetooth
-            if (!checkBluetoothSupport()) {
+            // Verificar suporte a Web Bluetooth
+            if (!navigator.bluetooth) {
+                addLog("❌ Seu navegador não suporta Web Bluetooth API.", "error");
+                addLog("Use Chrome, Edge ou Samsung Internet no Android.", "info");
                 connectBtn.disabled = true;
                 connectBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Navegador incompatível';
+                return;
             }
             
-            // Configurar eventos dos botões de conexão
+            // Configurar eventos
             connectBtn.addEventListener('click', connectToMicrobit);
             disconnectBtn.addEventListener('click', disconnectFromMicrobit);
-            
-            // Configurar botões de controle
             setupControlButtons();
-            
-            // Configurar controles por teclado
             setupKeyboardControls();
             
             // Estado inicial
             updateConnectionStatus();
-            
-            // Adicionar evento para prevenir comportamento padrão de toque
-            document.addEventListener('touchmove', (e) => {
-                if (e.target.classList.contains('directional-btn') || 
-                    e.target.classList.contains('action-btn') ||
-                    e.target.closest('.directional-btn') || 
-                    e.target.closest('.action-btn')) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
             
             // Adicionar mensagem sobre GitHub Pages
             if (window.location.hostname.includes('github.io')) {
