@@ -820,7 +820,7 @@
                         await new Promise(resolve => setTimeout(resolve, 300));
                         
                         // Testa com byte simples para ativar o canal
-                        const testData = new TextEncoder().encode("\n");
+                        const testData = new Uint8Array([10]); // Apenas newline
                         await rxCharacteristic.writeValue(testData);
                         
                         console.log('[13] Conexão Android preparada com sucesso!');
@@ -842,6 +842,22 @@
                 // Log específico para Android
                 if (isAndroid) {
                     addLog("Pronto para enviar comandos", "android");
+                }
+                
+                // === TESTE AUTOMÁTICO APÓS CONEXÃO (apenas Android) ===
+                if (isAndroid && isConnected && rxCharacteristic) {
+                    setTimeout(async () => {
+                        try {
+                            console.log('[ANDROID TEST] Enviando comando teste "a"...');
+                            // Testa com o mesmo método que funciona
+                            const testData = new Uint8Array([97, 10]); // "a\n" em bytes
+                            await rxCharacteristic.writeValue(testData);
+                            console.log('[ANDROID TEST] ✅ Comando "a" enviado!');
+                            addLog("Teste: comando 'a' enviado", "success");
+                        } catch (e) {
+                            console.error('[ANDROID TEST] ❌ Falha:', e);
+                        }
+                    }, 1000);
                 }
                 
             } catch (err) {
@@ -904,10 +920,10 @@
         }
         
         // ============================================
-        // FUNÇÃO DE ENVIO DE COMANDOS (OTIMIZADA PARA ANDROID)
+        // FUNÇÃO DE ENVIO DE COMANDOS (CORRIGIDA PARA ANDROID)
         // ============================================
         async function sendCommand(command) {
-            // VALIDAÇÃO ROBUSTA
+            // VALIDAÇÃO
             if (!isConnected) {
                 addLog("❌ Não conectado ao Micro:bit", "error");
                 return;
@@ -930,12 +946,26 @@
                 return;
             }
             
-            console.log(`[ENVIO] Comando: "${command}"`);
+            console.log(`[ENVIO ANDROID] Comando: "${command}"`);
             
             try {
-                const encoder = new TextEncoder();
-                // FORMATO: comando + \n (funciona em Android e desktop)
-                const data = encoder.encode(command + "\n");
+                // ===== SOLUÇÃO: Use Uint8Array manualmente =====
+                // Android tem problemas com TextEncoder().encode()
+                // Vamos converter manualmente a string para bytes
+                const bytes = [];
+                
+                // Adiciona cada caractere da string
+                for (let i = 0; i < command.length; i++) {
+                    bytes.push(command.charCodeAt(i));
+                }
+                
+                // Adiciona newline (\n) = código 10
+                bytes.push(10);
+                
+                // Cria Uint8Array (igual ao teste que funcionou)
+                const data = new Uint8Array(bytes);
+                
+                console.log(`[ENVIO ANDROID] Bytes:`, Array.from(data), `(string: "${command}\\n")`);
                 
                 // Método otimizado para Android
                 if (isAndroid) {
@@ -944,18 +974,23 @@
                         rxCharacteristic.writeValue(data)
                     );
                 } else {
-                    // Para desktop, envio direto
+                    // Para desktop, envio direto (mantém compatibilidade)
                     await rxCharacteristic.writeValue(data);
                 }
                 
-                console.log(`✅ Comando "${command}" ENVIADO!`);
+                console.log(`✅ Comando "${command}" ENVIADO via Uint8Array!`);
                 addLog(`📱 ${command} → Micro:bit`, "command");
                 
                 // FEEDBACK VISUAL FORTE
                 highlightButton(command);
                 
+                // Log de sucesso específico para Android
+                if (isAndroid) {
+                    console.log(`[ANDROID SUCCESS] Bytes enviados: ${Array.from(data).join(', ')}`);
+                }
+                
             } catch (error) {
-                console.error('❌ ERRO NO ENVIO:', error.name, error.message);
+                console.error('❌ ERRO NO ENVIO ANDROID:', error.name, error.message);
                 
                 // TRATAMENTO ESPECÍFICO PARA ANDROID
                 if (error.name === 'NetworkError') {
@@ -1048,7 +1083,9 @@
             if (isConnected && rxCharacteristic) {
                 try {
                     console.log('4. Testando envio de byte teste...');
-                    await rxCharacteristic.writeValue(new Uint8Array([65, 10])); // "A\n"
+                    // Usando Uint8Array diretamente (método que funciona)
+                    const testData = new Uint8Array([65, 10]); // "A\n"
+                    await rxCharacteristic.writeValue(testData);
                     console.log('✅ Byte teste enviado!');
                     addLog("Teste: byte enviado com sucesso", "success");
                 } catch (e) {
