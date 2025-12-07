@@ -15,6 +15,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
+    <!-- Controle de Cache para GitHub Pages -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <!-- Icons and Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
@@ -198,18 +203,32 @@
             user-select: none;
         }
         
-        .directional-btn:active {
+        /* Botão circular central */
+        .center-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: var(--accent-color);
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .directional-btn:active, .center-btn:active {
             transform: translateY(4px);
             box-shadow: 0 1px 0 var(--bg-medium), 0 3px 5px rgba(0, 0, 0, 0.2);
             background-color: #303f9f;
         }
         
+        .center-btn:active {
+            background-color: #ff5252;
+        }
+        
         .action-buttons {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 12px;
             width: 100%;
-            max-width: 350px;
+            max-width: 600px;
         }
         
         .action-btn {
@@ -424,6 +443,22 @@
             opacity: 0.7;
         }
         
+        .email-display {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            padding: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .email-display i {
+            color: var(--accent-color);
+        }
+        
         /* Estados ativos para feedback visual */
         .btn-active {
             background-color: #283593 !important;
@@ -444,8 +479,19 @@
                 font-size: 2rem;
             }
             
+            .center-btn {
+                width: 65px;
+                height: 65px;
+                font-size: 1.3rem;
+            }
+            
             h1 {
                 font-size: 1.8rem;
+            }
+            
+            .action-buttons {
+                grid-template-columns: repeat(2, 1fr);
+                max-width: 350px;
             }
             
             .action-btn {
@@ -485,8 +531,14 @@
                 font-size: 1.8rem;
             }
             
+            .center-btn {
+                width: 55px;
+                height: 55px;
+                font-size: 1.1rem;
+            }
+            
             .action-buttons {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
                 max-width: 250px;
             }
             
@@ -536,46 +588,64 @@
         <main class="control-panel">
             <div class="directional-pad">
                 <div class="directional-row">
-                    <button class="directional-btn" id="btn-up" data-command="a" aria-label="Seta para cima - Envia comando 'a'">
+                    <button class="directional-btn" id="btn-up" data-command="w" aria-label="Seta para cima - Envia comando 'w'">
                         <i class="fas fa-arrow-up"></i>
                     </button>
                 </div>
                 <div class="directional-row">
-                    <button class="directional-btn" id="btn-left" data-command="b" aria-label="Seta para esquerda - Envia comando 'b'">
+                    <button class="directional-btn" id="btn-left" data-command="a" aria-label="Seta para esquerda - Envia comando 'a'">
                         <i class="fas fa-arrow-left"></i>
                     </button>
-                    <div class="directional-btn" style="visibility: hidden; pointer-events: none;"></div>
-                    <button class="directional-btn" id="btn-right" data-command="c" aria-label="Seta para direita - Envia comando 'c'">
+                    <button class="directional-btn center-btn" id="btn-center" data-command="x" aria-label="Botão central - Envia comando 'x'">
+                        X
+                    </button>
+                    <button class="directional-btn" id="btn-right" data-command="d" aria-label="Seta para direita - Envia comando 'd'">
                         <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
                 <div class="directional-row">
-                    <button class="directional-btn" id="btn-down" data-command="d" aria-label="Seta para baixo - Envia comando 'd'">
+                    <button class="directional-btn" id="btn-down" data-command="s" aria-label="Seta para baixo - Envia comando 's'">
                         <i class="fas fa-arrow-down"></i>
                     </button>
                 </div>
             </div>
             
             <div class="action-buttons">
-                <button class="action-btn" id="btn-action1" data-command="e" aria-label="Botão A - Envia comando 'e'">
-                    Botão A
-                    <div class="btn-info">Envia: 'e'</div>
+                <button class="action-btn" id="btn-action1" data-command="1" aria-label="Botão 1 - Envia comando '1'">
+                    Botão 1
+                    <div class="btn-info">Envia: '1'</div>
                 </button>
-                <button class="action-btn" id="btn-action2" data-command="f" aria-label="Botão B - Envia comando 'f'">
-                    Botão B
-                    <div class="btn-info">Envia: 'f'</div>
+                <button class="action-btn" id="btn-action2" data-command="2" aria-label="Botão 2 - Envia comando '2'">
+                    Botão 2
+                    <div class="btn-info">Envia: '2'</div>
                 </button>
-                <button class="action-btn" id="btn-action3" data-command="g" aria-label="Botão C - Envia comando 'g'">
-                    Botão C
-                    <div class="btn-info">Envia: 'g'</div>
+                <button class="action-btn" id="btn-action3" data-command="3" aria-label="Botão 3 - Envia comando '3'">
+                    Botão 3
+                    <div class="btn-info">Envia: '3'</div>
                 </button>
-                <button class="action-btn" id="btn-action4" data-command="h" aria-label="Botão D - Envia comando 'h'">
-                    Botão D
-                    <div class="btn-info">Envia: 'h'</div>
+                <button class="action-btn" id="btn-action4" data-command="4" aria-label="Botão 4 - Envia comando '4'">
+                    Botão 4
+                    <div class="btn-info">Envia: '4'</div>
+                </button>
+                <button class="action-btn" id="btn-action5" data-command="5" aria-label="Botão 5 - Envia comando '5'">
+                    Botão 5
+                    <div class="btn-info">Envia: '5'</div>
+                </button>
+                <button class="action-btn" id="btn-action6" data-command="6" aria-label="Botão 6 - Envia comando '6'">
+                    Botão 6
+                    <div class="btn-info">Envia: '6'</div>
+                </button>
+                <button class="action-btn" id="btn-action7" data-command="7" aria-label="Botão 7 - Envia comando '7'">
+                    Botão 7
+                    <div class="btn-info">Envia: '7'</div>
+                </button>
+                <button class="action-btn" id="btn-action8" data-command="8" aria-label="Botão 8 - Envia comando '8'">
+                    Botão 8
+                    <div class="btn-info">Envia: '8'</div>
                 </button>
             </div>
             
-            <p class="keyboard-hint">Teclas: Setas (↑←→↓) e 1-4 ou A-D para botões</p>
+            <p class="keyboard-hint">Teclas: W, A, S, D, X (direcionais e centro) e 1-8 para botões</p>
         </main>
         
         <section class="connection-panel">
@@ -606,7 +676,7 @@
                     <li>1. Ligue o Micro:bit e ative Bluetooth</li>
                     <li>2. Toque em "Conectar" e selecione seu Micro:bit</li>
                     <li>3. Use setas/botões para enviar comandos</li>
-                    <li>4. Comandos: a=↑, b=←, c=→, d=↓, e=parar</li>
+                    <li>4. Comandos: w=↑, a=←, s=↓, d=→, x=centro, 1-8=botões</li>
                 </ul>
             </div>
             
@@ -615,6 +685,12 @@
                     <span class="log-time">[00:00:00]</span> 
                     <span><i class="fas fa-info-circle" style="color:#bbdefb; margin-right:5px;"></i>Página carregada. Pronto para conectar.</span>
                 </div>
+            </div>
+            
+            <div class="email-display">
+                <i class="fas fa-envelope"></i>
+                <span>profisicacleber@gmail.com</span>
+                <i class="fas fa-envelope"></i>
             </div>
             
             <div class="professor-footer">
@@ -644,6 +720,7 @@
         let isConnected = false;
         let rxCharacteristic = null;
         let isAndroid = /Android/i.test(navigator.userAgent);
+        let touchActive = false; // Controle de estado de toque
         
         // FILA DE OPERAÇÕES (para evitar sobrecarga no Android)
         let queue = Promise.resolve();
@@ -661,7 +738,7 @@
         const debugBtn = document.getElementById('android-debug');
         const logPanel = document.getElementById('log-panel');
         const bluetoothIcon = document.querySelector('.bluetooth-status i');
-        const controlButtons = document.querySelectorAll('.directional-btn, .action-btn');
+        const controlButtons = document.querySelectorAll('.directional-btn, .action-btn, .center-btn');
         
         // ============================================
         // FUNÇÕES DE LOG E INTERFACE
@@ -848,12 +925,12 @@
                 if (isAndroid && isConnected && rxCharacteristic) {
                     setTimeout(async () => {
                         try {
-                            console.log('[ANDROID TEST] Enviando comando teste "a"...');
+                            console.log('[ANDROID TEST] Enviando comando teste "w"...');
                             // Testa com o mesmo método que funciona
-                            const testData = new Uint8Array([97, 10]); // "a\n" em bytes
+                            const testData = new Uint8Array([119, 10]); // "w\n" em bytes
                             await rxCharacteristic.writeValue(testData);
-                            console.log('[ANDROID TEST] ✅ Comando "a" enviado!');
-                            addLog("Teste: comando 'a' enviado", "success");
+                            console.log('[ANDROID TEST] ✅ Comando "w" enviado!');
+                            addLog("Teste: comando 'w' enviado", "success");
                         } catch (e) {
                             console.error('[ANDROID TEST] ❌ Falha:', e);
                         }
@@ -1084,7 +1161,7 @@
                 try {
                     console.log('4. Testando envio de byte teste...');
                     // Usando Uint8Array diretamente (método que funciona)
-                    const testData = new Uint8Array([65, 10]); // "A\n"
+                    const testData = new Uint8Array([87, 10]); // "W\n"
                     await rxCharacteristic.writeValue(testData);
                     console.log('✅ Byte teste enviado!');
                     addLog("Teste: byte enviado com sucesso", "success");
@@ -1105,7 +1182,7 @@
         }
         
         // ============================================
-        // CONFIGURAÇÃO DE EVENTOS
+        // CONFIGURAÇÃO DE EVENTOS (MELHORADA PARA ANDROID)
         // ============================================
         function setupControlButtons() {
             controlButtons.forEach(button => {
@@ -1115,18 +1192,37 @@
                     sendCommand(command);
                 });
                 
-                // Touch events para mobile
+                // Touch events melhorados para mobile
                 button.addEventListener('touchstart', (e) => {
                     e.preventDefault();
+                    touchActive = true;
                     button.style.opacity = '0.8';
                     button.style.transform = 'scale(0.95)';
+                    
+                    // Envia imediatamente no touchstart (melhor para Android)
+                    const command = button.getAttribute('data-command');
+                    setTimeout(() => sendCommand(command), 10);
                 }, { passive: false });
                 
                 button.addEventListener('touchend', (e) => {
                     e.preventDefault();
+                    touchActive = false;
                     button.style.opacity = '';
                     button.style.transform = '';
                 }, { passive: false });
+                
+                button.addEventListener('touchcancel', (e) => {
+                    e.preventDefault();
+                    touchActive = false;
+                    button.style.opacity = '';
+                    button.style.transform = '';
+                }, { passive: false });
+                
+                // Evita que o toque longo abra o menu de contexto
+                button.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    return false;
+                });
             });
         }
         
@@ -1138,22 +1234,33 @@
                 let command = null;
                 
                 switch(event.key) {
-                    case 'ArrowUp': command = 'a'; break;
-                    case 'ArrowLeft': command = 'b'; break;
-                    case 'ArrowRight': command = 'c'; break;
-                    case 'ArrowDown': command = 'd'; break;
-                    case '1': command = 'e'; break;
-                    case '2': command = 'f'; break;
-                    case '3': command = 'g'; break;
-                    case '4': command = 'h'; break;
+                    case 'ArrowUp': 
+                    case 'w':
+                    case 'W': command = 'w'; break;
+                    
+                    case 'ArrowLeft':
                     case 'a':
-                    case 'A': if (!event.ctrlKey) command = 'e'; break;
-                    case 'b':
-                    case 'B': command = 'f'; break;
-                    case 'c':
-                    case 'C': command = 'g'; break;
+                    case 'A': command = 'a'; break;
+                    
+                    case 'ArrowRight':
                     case 'd':
-                    case 'D': command = 'h'; break;
+                    case 'D': command = 'd'; break;
+                    
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S': command = 's'; break;
+                    
+                    case 'x':
+                    case 'X': command = 'x'; break;
+                    
+                    case '1': command = '1'; break;
+                    case '2': command = '2'; break;
+                    case '3': command = '3'; break;
+                    case '4': command = '4'; break;
+                    case '5': command = '5'; break;
+                    case '6': command = '6'; break;
+                    case '7': command = '7'; break;
+                    case '8': command = '8'; break;
                 }
                 
                 if (command) {
@@ -1202,6 +1309,7 @@
             // Detectar se estamos no GitHub Pages
             if (window.location.hostname.includes('github.io')) {
                 addLog("🌐 Hospedado no GitHub Pages", "success");
+                console.log("✅ Página otimizada para GitHub Pages");
             }
             
             // Dica para Android
@@ -1209,6 +1317,19 @@
                 setTimeout(() => {
                     addLog("💡 Dica: Adicione esta página à tela inicial", "android");
                 }, 2000);
+            }
+            
+            // Forçar melhorias para Android
+            if (isAndroid) {
+                // Previne comportamento padrão de toque
+                document.addEventListener('touchmove', (e) => {
+                    if (touchActive) {
+                        e.preventDefault();
+                    }
+                }, { passive: false });
+                
+                // Melhor feedback visual
+                document.body.classList.add('android-mode');
             }
         }
         
@@ -1218,13 +1339,6 @@
         } else {
             initApp();
         }
-        
-        // Prevenir menu de contexto em botões (mobile)
-        document.addEventListener('contextmenu', (e) => {
-            if (e.target.closest('.directional-btn') || e.target.closest('.action-btn')) {
-                e.preventDefault();
-            }
-        });
         
         // Manter tela ativa (especialmente para Android)
         let wakeLock = null;
@@ -1248,8 +1362,15 @@
         
         // Ativa wake lock inicial
         if (isAndroid) {
-            requestWakeLock();
+            setTimeout(requestWakeLock, 500); // Pequeno delay para estabilidade
         }
+        
+        // Previne comportamento padrão de toque nos botões
+        document.addEventListener('touchstart', function(e) {
+            if (e.target.closest('.directional-btn, .action-btn, .center-btn')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
     </script>
 </body>
 </html>
